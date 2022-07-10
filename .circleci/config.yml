@@ -233,8 +233,8 @@ jobs:
                 command: |
                     cd backend
                     npm install
-                    npm run migrations > migrations_dump.txt
-                    cat migrations_dump.txt
+                    npm run migrations
+                   
             - run:
                 name: Send migration results to kvdb.io OR memstash.io
                 command: |
