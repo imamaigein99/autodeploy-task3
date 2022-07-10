@@ -149,7 +149,7 @@ jobs:
         steps:
         - checkout
         - run:
-            name: "Install dependancies"
+            name: "Install dependancies88"
             command: |
                 yum install tar gzip -y
                 yum update -y
