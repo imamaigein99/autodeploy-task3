@@ -1,5 +1,5 @@
 ---
-- name: create app directory
+- name: create directory
   become: true
   command: mkdir /home/ubuntu/udapeople
 
@@ -21,7 +21,7 @@
       tar -xvf artifact.tar.gz
       rm -rf artifact.tar.gz
 
-- name: "stop already running instances"
+- name: "stop instances"
   become: true
   shell: |
       pm2 delete all
