@@ -255,6 +255,7 @@ jobs:
                     apk add tar gzip ansible nodejs curl rsync openssh
                     apk add --update npm
                     pip install awscli
+                    
             - attach_workspace:
                 at: ~/
             - run:
