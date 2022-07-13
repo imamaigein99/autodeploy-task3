@@ -309,7 +309,7 @@ jobs:
                      sleep 5m
                      if curl -s ${URL} | grep "Welcome"
                      then
-                        return 0
+                        return 1
                      else
                         return 1
                      fi
