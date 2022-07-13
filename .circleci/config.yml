@@ -160,18 +160,18 @@ jobs:
             command: |
                 aws cloudformation deploy \
                 --template-file .circleci/files/backend.yml \
-                --stack-name "udapeople-backend-hh" \
-                --parameter-overrides ID="hh" \
-                --tags project=udapeople-backend-hh
+                --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+                --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}" \
+                --tags project=udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7} 
                 
         - run:
             name: Ensure front-end infrastructure exist
             command: |
                 aws cloudformation deploy \
                 --template-file .circleci/files/frontend.yml \
-                --tags project=udapeople-frontend-hh \
-                --stack-name "udapeople-frontend-hh" \
-                --parameter-overrides ID="hh"
+                --tags project=udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7} \
+                --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
+                --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
                
         - run:
             name: Add back-end ip to ansible inventory
@@ -185,6 +185,131 @@ jobs:
             paths:
                 - project/.circleci/ansible/inventory.txt
         - destroy-environment
+    
+    configure-infrastructure:
+        docker:
+            - image: python:3.7-alpine3.11
+        steps:
+            - checkout
+            - add_ssh_keys:
+                fingerprints: ["55:3e:c0:21:ec:c4:c0:ba:74:c1:47:17:15:c9:3f:08"]
+            - run:
+                name: Install dependencies
+                command: |
+                    apk add tar gzip ansible nodejs
+                    pip install --upgrade pip
+                    pip install awscli
+            - attach_workspace:
+                at: ~/
+            - run:
+                name: Configure server
+                command: |
+                    pwd               
+                    cd .circleci/ansible
+                    ansible-playbook -i inventory.txt configure-server.yml
+            - slack/notify:
+               event: fail
+               mentions: '@DevopsTeamOmega'
+               template: basic_fail_1
+            - destroy-environment  
+
+    run-migrations:
+        docker:
+            - image: circleci/node:13.8.0
+        steps:
+            - checkout
+            - restore_cache:
+                keys: [backend-build]
+            - run:
+                name: install dependancies
+                command: |
+                    sudo apt-get update && sudo apt-get upgrade
+                    sudo apt-get install curl tar -y
+                    sudo apt-get install awscli -y
+            - attach_workspace:
+                at: ~/
+            - run:
+                name: Run migrations
+                command: |
+                    cd backend
+                    npm install
+                    npm run migrations --force > migrations_dump.txt
+                   
+            - run:
+                name: Send migration results to kvdb.io OR memstash.io
+                command: |
+                    if grep -q "has been executed successfully." ~/project/backend/migrations_dump.txt
+                    then 
+                        curl --insecure https://kvdb.io/EfFzKLVVex93QTjSRACwFs/migration_${CIRCLE_WORKFLOW_ID:0:7}  -d '1'
+                    fi
+            - destroy-environment 
+            - revert-migrations
+
+    deploy-frontend:
+        docker:
+            - image: amazon/aws-cli
+        steps:
+            - checkout
+            - run:
+                name: Install dependencies
+                command: |
+                    yum install python3 -y
+                    yum install gzip tar curl -y
+                    curl --silent --location https://rpm.nodesource.com/setup_16.x | bash -
+                    yum install nodejs -y
+            - attach_workspace:
+                at: ~/
+            - run:
+                name: Get backend url
+                command: |
+                    export BACKEND_IP=$(aws ec2 describe-instances --query 'Reservations[*].Instances[*].PublicDnsName' \
+                    --filters "Name=tag:project,Values=udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" --output text)
+                    export API_URL="http://${BACKEND_IP}:3030"
+                    echo "API_URL = ${API_URL}"
+                    echo API_URL="http://${BACKEND_IP}:3030" >> frontend/.env
+                    cat frontend/.env
+            - run:
+                name: Deploy frontend objects
+                command: |
+                    cd frontend
+                    npm install
+                    npm run build
+                    tar -czvf artifact-"${CIRCLE_WORKFLOW_ID:0:7}".tar.gz dist
+                    aws s3 cp dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --recursive
+            - destroy-environment
+            - revert-migrations
+            
+    deploy-backend:
+        docker:
+            - image: python:3.7-alpine3.11
+        steps:
+            - checkout
+            - add_ssh_keys:
+                fingerprints: ["ac:59:30:21:5e:76:9f:1e:27:93:f4:cc:fb:4f:9b:86"]
+            - run:
+                name: Install dependencies
+                command: |
+                    apk add tar gzip ansible nodejs curl rsync openssh
+                    apk add --update npm
+                    pip install awscli
+            - attach_workspace:
+                at: ~/
+            - run:
+                name: Deploy backend
+                command: |
+                    cd backend
+                    npm i
+                    npm run build
+                    cd ..
+                    tar -C backend -czvf artifact.tar.gz .
+                    mkdir .circleci/ansible/roles/deploy/files/
+                    cp artifact.tar.gz .circleci/ansible/roles/deploy/files/
+                    cd .circleci/ansible
+                    echo 'Contents  of the inventory.txt file is -------'
+                    cat inventory.txt
+                    ansible-playbook -i inventory.txt deploy-backend.yml -vvv
+            - destroy-environment
+            - revert-migrations
     
 workflows:
   my_workflow:
@@ -201,5 +326,13 @@ workflows:
               requires: [build-backend]
           - deploy-infrastructure:
               requires: [test-frontend,test-backend]
+          - configure-infrastructure:
+              requires: [deploy-infrastructure]
+          - run-migrations:
+              requires: [configure-infrastructure]
+          - deploy-frontend:
+              requires: [run-migrations]
+          - deploy-backend:
+              requires: [run-migrations]
           
 
