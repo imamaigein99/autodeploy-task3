@@ -253,7 +253,7 @@ jobs:
                 name: Install dependencies
                 command: |
                     apk add tar gzip ansible nodejs curl rsync openssh
-                    apk add --update npm pm2
+                    apk add --update npm
                     pip install awscli
             - attach_workspace:
                 at: ~/
