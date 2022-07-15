@@ -404,7 +404,7 @@ jobs:
                     --stack-status-filter CREATE_COMPLETE --no-paginate --output text))
                     echo Stack names: "${STACKS[@]}"
             - run:
-                name: DELETE old stacks and files
+                name: Delete old stacks and files
                 command: |
                     if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]
                     then
