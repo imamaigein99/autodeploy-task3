@@ -390,7 +390,7 @@ jobs:
             - attach_workspace:
                 at: ~/
             - run:
-                name: Get old stack workflow id
+                name: Fetch old stack workflow ID
                 command: |
                     echo "###### Fetch the Old workflow ID ######"
                     export OldWorkflowID=$(aws cloudformation \
@@ -404,7 +404,7 @@ jobs:
                     --stack-status-filter CREATE_COMPLETE --no-paginate --output text))
                     echo Stack names: "${STACKS[@]}"
             - run:
-                name: Remove old stacks and files
+                name: DELETE old stacks and files
                 command: |
                     if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]
                     then
