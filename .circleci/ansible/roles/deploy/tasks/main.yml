@@ -35,9 +35,9 @@
   environment:
       ENVIRONMENT: production
       TYPEORM_CONNECTION: postgres
-      TYPEORM_ENTITIES: "/home/ubuntu/udapeople/src/modules/domain/**/*.entity{.ts,.js}"
-      TYPEORM_MIGRATIONS_DIR: "/home/ubuntu/udapeople/src/migrations"
-      TYPEORM_MIGRATIONS: "/home/ubuntu/udapeople/src/migrations/*.js"      
+      TYPEORM_ENTITIES: "/home/ubuntu/udapeople/dist/modules/domain/**/*.entity{.ts,.js}"
+      TYPEORM_MIGRATIONS_DIR: "/home/ubuntu/udapeople/dist/migrations"
+      TYPEORM_MIGRATIONS: "/home/ubuntu/udapeople/dist/migrations/*.js"      
       TYPEORM_HOST: "{{ lookup('env', 'TYPEORM_HOST') }}"
       TYPEORM_PORT: "{{ lookup('env', 'TYPEORM_PORT') }}"
       TYPEORM_USERNAME: "{{ lookup('env', 'TYPEORM_USERNAME') }}"
